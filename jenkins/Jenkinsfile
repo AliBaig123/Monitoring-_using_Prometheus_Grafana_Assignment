@@ -39,29 +39,40 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    sh """
-                        docker push ${DOCKER_REGISTRY}/${APP_NAME}:${BUILD_NUMBER}
-                        docker push ${DOCKER_REGISTRY}/${APP_NAME}:latest
-                    """
-                    echo "Image pushed to dokcer hub"
+                    withCredentials([usernamePassword(credentialsId: 'alibaih123/******',
+                                                      usernameVariable: 'DOCKER_USER',
+                                                      passwordVariable: 'DOCKER_PASS')]) {
+                        sh """
+                            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                            docker push ${DOCKER_REGISTRY}/${APP_NAME}:${BUILD_NUMBER}
+                            docker push ${DOCKER_REGISTRY}/${APP_NAME}:latest
+                        """
+                    }
+                    echo "Image pushed to Docker Hub"
                 }
             }
         }
         
         stage('Deploy with Helm') {
             steps {
-                deployHelmChart(HELM_CHART, APP_NAME, NAMESPACE, "${DOCKER_REGISTRY}/${APP_NAME}", "${BUILD_NUMBER}")
+                script {
+                    withKubeConfig([credentialsId: 'kubeconfig-data']) {
+                        deployHelmChart(HELM_CHART, APP_NAME, NAMESPACE, "${DOCKER_REGISTRY}/${APP_NAME}", "${BUILD_NUMBER}")
+                    }
+                }
             }
         }
         
         stage('Health Check') {
             steps {
                 script {
-                    sh """
-                        kubectl wait --for=condition=ready pod -l app=${APP_NAME} \
-                            --namespace ${NAMESPACE} --timeout=120s
-                        echo "Application is healthy"
-                    """
+                    withKubeConfig([credentialsId: 'kubeconfig-data']) {
+                        sh """
+                            kubectl wait --for=condition=ready pod -l app=${APP_NAME} \
+                                --namespace ${NAMESPACE} --timeout=120s
+                            echo "Application is healthy"
+                        """
+                    }
                 }
             }
         }
@@ -69,10 +80,10 @@ pipeline {
     
     post {
         success {
-            echo " Pipeline SUCCESS! App deployed successfully!"
+            echo "Pipeline SUCCESS! App deployed successfully!"
         }
         failure {
-            echo " Pipeline FAILED! Check logs above."
+            echo "Pipeline FAILED! Check logs above."
         }
     }
 }
