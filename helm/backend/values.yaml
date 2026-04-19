@@ -1,0 +1,7 @@
+replicaCount: 1
+image:
+  repository: app
+  tag: "3"
+namespace: dev
+service:
+  port: 9090

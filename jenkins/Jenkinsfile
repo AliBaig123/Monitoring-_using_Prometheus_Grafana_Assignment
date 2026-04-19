@@ -1,0 +1,78 @@
+@Library('devops-lib') _
+
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_REGISTRY = 'alibaih123'
+        APP_NAME = 'backend'
+        NAMESPACE = 'dev'
+        HELM_CHART = './helm/backend'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                echo "Code checked out"
+            }
+        }
+        
+        stage('Build App') {
+            steps {
+                buildApp()
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                runTests()
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                buildDockerImage("${DOCKER_REGISTRY}/${APP_NAME}", "${BUILD_NUMBER}")
+            }
+        }
+        
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    sh """
+                        docker push ${DOCKER_REGISTRY}/${APP_NAME}:${BUILD_NUMBER}
+                        docker push ${DOCKER_REGISTRY}/${APP_NAME}:latest
+                    """
+                    echo "Image pushed to dokcer hub"
+                }
+            }
+        }
+        
+        stage('Deploy with Helm') {
+            steps {
+                deployHelmChart(HELM_CHART, APP_NAME, NAMESPACE, "${DOCKER_REGISTRY}/${APP_NAME}", "${BUILD_NUMBER}")
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                script {
+                    sh """
+                        kubectl wait --for=condition=ready pod -l app=${APP_NAME} \
+                            --namespace ${NAMESPACE} --timeout=120s
+                        echo "Application is healthy"
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo " Pipeline SUCCESS! App deployed successfully!"
+        }
+        failure {
+            echo " Pipeline FAILED! Check logs above."
+        }
+    }
+}

@@ -4,10 +4,6 @@
 FROM maven:3.8.4-openjdk-17-slim AS builder 
 WORKDIR /app
 COPY pom.xml .
-<<<<<<< HEAD
-#RUN mvn dependency:go-offline
-=======
->>>>>>> ad0d1798ff2eba89194855f2cd173b1bb19de84e
 COPY src ./src
 RUN mvn package -DskipTests
 

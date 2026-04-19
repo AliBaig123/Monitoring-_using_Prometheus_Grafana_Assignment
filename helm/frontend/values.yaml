@@ -1,0 +1,10 @@
+replicaCount: 1
+image:
+  repository: frontend-application
+  tag: "1"
+  pullPolicy: IfNotPresent
+service:
+  type: ClusterIP
+  port: 80
+autoscaling:
+  enabled: false 

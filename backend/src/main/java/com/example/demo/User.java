@@ -25,13 +25,13 @@ public class User {
         createdAt = LocalDateTime.now();
     }
     
-    // Getters
+   
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getEmail() { return email; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     
-    // Setters
+    
     public void setId(Long id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }
